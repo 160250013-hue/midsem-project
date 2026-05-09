@@ -1,0 +1,50 @@
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color: #0f172a;
+  background:
+    radial-gradient(circle at top left, rgba(15, 118, 110, 0.15), transparent 35%),
+    radial-gradient(circle at bottom right, rgba(245, 158, 11, 0.1), transparent 25%),
+    #f8fafc;
+}
+
+body {
+  min-height: 100vh;
+  font-family: "Poppins", ui-sans-serif, system-ui;
+}
+
+.dark body {
+  color: #e2e8f0;
+  background:
+    radial-gradient(circle at top left, rgba(15, 118, 110, 0.2), transparent 35%),
+    radial-gradient(circle at bottom right, rgba(245, 158, 11, 0.15), transparent 25%),
+    #0f172a;
+}
+
+.dark .card {
+  @apply border-slate-700 bg-slate-900/80 text-slate-100;
+}
+
+.dark .input {
+  @apply border-slate-600 bg-slate-800 text-slate-100 focus:border-brand-500 focus:ring-brand-100;
+}
+
+.card {
+  @apply rounded-2xl border border-slate-200 bg-white/90 shadow-sm backdrop-blur;
+}
+
+.input {
+  @apply w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100;
+}
+
+.button-primary {
+  @apply rounded-xl bg-brand-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-600;
+}
+
+.button-secondary {
+  @apply rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50;
+}
