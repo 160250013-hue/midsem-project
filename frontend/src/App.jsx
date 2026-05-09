@@ -97,6 +97,7 @@ export default function App() {
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route path="/" element={token ? <DashboardRouter /> : <Navigate to="/login" replace />} />
+        <Route path="*" element={<Navigate to={token ? "/" : "/login"} replace />} />
       </Routes>
     </>
   );
