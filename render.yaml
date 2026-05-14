@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: midsem-project
+    runtime: node
+    plan: free
+    buildCommand: |
+      cd frontend && npm install && npm run build && cd ../backend && npm install
+    startCommand: node src/server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
