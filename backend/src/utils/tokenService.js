@@ -50,4 +50,3 @@ export const getTokenExpiryDate = (token) => {
 };
 
 export const hashToken = (token) => crypto.createHash("sha256").update(token).digest("hex");
-160250013-hue
