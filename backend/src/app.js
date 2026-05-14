@@ -100,6 +100,20 @@ app.use("/api/users", userRoutes);
 app.use("/api/resume", resumeRoutes);
 app.use("/api/matching", matchingRoutes);
 
+// Serve frontend static files (React SPA)
+const frontendBuildPath = path.resolve(__dirname, "../../frontend/dist");
+app.use(express.static(frontendBuildPath));
+
+// SPA fallback - serve index.html for all non-API routes
+app.get("*", (_req, res) => {
+  const indexPath = path.join(frontendBuildPath, "index.html");
+  res.sendFile(indexPath, (err) => {
+    if (err) {
+      res.status(500).json({ error: "Could not load application" });
+    }
+  });
+});
+
 app.use(notFound);
 app.use(errorHandler);
 
