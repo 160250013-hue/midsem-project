@@ -4,11 +4,21 @@ const hasSmtpConfig = Boolean(
   process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS
 );
 
+const smtpPort = Number(process.env.SMTP_PORT || 587);
+const isSecureSmtp = smtpPort === 465;
+const defaultFromAddress = process.env.SMTP_USER || "noreply@campus-portal.com";
+const authenticatedFromAddress = process.env.SMTP_USER || defaultFromAddress;
+
+if (!hasSmtpConfig && process.env.NODE_ENV === "production") {
+  throw new Error("SMTP configuration is required in production to send OTP emails");
+}
+
 const transporter = hasSmtpConfig
   ? nodemailer.createTransport({
       host: process.env.SMTP_HOST,
-      port: process.env.SMTP_PORT || 587,
-      secure: true,
+      port: smtpPort,
+      secure: isSecureSmtp,
+      requireTLS: !isSecureSmtp,
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS
@@ -23,7 +33,7 @@ export const sendOTPEmail = async (email, otp) => {
     }
 
     const mailOptions = {
-      from: process.env.SMTP_FROM || "noreply@campus-portal.com",
+      from: authenticatedFromAddress,
       to: email,
       subject: "Campus Portal - Email Verification OTP",
       text: `Your verification code is: ${otp}`,
@@ -65,7 +75,7 @@ export const sendOTPEmail = async (email, otp) => {
 export const sendPasswordResetEmail = async (email, resetLink) => {
   try {
     const mailOptions = {
-      from: process.env.SMTP_FROM || "noreply@campus-portal.com",
+      from: authenticatedFromAddress,
       to: email,
       subject: "Campus Portal - Password Reset Link",
       html: `
@@ -120,7 +130,7 @@ export const sendApplicationStatusUpdateEmail = async ({
     const normalizedStatus = status.replaceAll("_", " ").toUpperCase();
 
     const mailOptions = {
-      from: process.env.SMTP_FROM || "noreply@campus-portal.com",
+      from: authenticatedFromAddress,
       to: email,
       subject: `Application Update - ${company} (${normalizedStatus})`,
       text: `Hi ${studentName}, your application for ${jobTitle} at ${company} is now ${normalizedStatus}.`,

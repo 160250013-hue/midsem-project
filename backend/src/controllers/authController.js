@@ -22,14 +22,10 @@ import {
   getTokenExpiryDate,
   verifyRefreshToken
 } from "../utils/tokenService.js";
-import { generateOTP, getOTPExpiryTime, isOTPExpired } from "../utils/otpService.js";
-import { sendOTPEmail, sendPasswordResetEmail } from "../utils/emailService.js";
+import { sendPasswordResetEmail } from "../utils/emailService.js";
 import {
-  createEmailVerification,
-  getEmailVerificationByUserId,
-  incrementEmailVerificationAttempts,
-  deleteEmailVerificationsByUserId,
   updateUserEmailVerificationStatus,
+  deleteEmailVerificationsByUserId,
   deleteExpiredEmailVerifications
 } from "../models/emailVerificationModel.js";
 import {
@@ -197,25 +193,13 @@ export const register = asyncHandler(async (req, res) => {
     });
   }
 
-  const otp = generateOTP();
-  const expiryTime = getOTPExpiryTime();
-
   await deleteEmailVerificationsByUserId(user.id);
-  await createEmailVerification({
-    userId: user.id,
-    otp,
-    expiryTime
-  });
 
-  try {
-    await sendOTPEmail(email, otp);
-  } catch (error) {
-    console.error("[auth/register] OTP email failed:", error.message);
-  }
+  await updateUserEmailVerificationStatus(user.id);
 
   res.status(201).json({
     success: true,
-    message: "Registration successful. Please verify your email."
+    message: "Registration successful. You can login now."
   });
 });
 
@@ -230,10 +214,6 @@ export const login = asyncHandler(async (req, res) => {
 
   if (!user.is_active) {
     throw new HttpError(403, "User account is unavailable");
-  }
-
-  if (!(user.is_verified || user.email_verified)) {
-    throw new HttpError(403, "Please verify your email before login");
   }
 
   // Check if password hash exists (handle Google OAuth cases)
@@ -342,27 +322,10 @@ export const sendOTP = asyncHandler(async (req, res) => {
     throw new HttpError(404, "User not found");
   }
 
-  if (user.is_verified || user.email_verified) {
-    res.json({ success: true, message: "Email already verified" });
-    return;
-  }
-
-  // Generate OTP
-  const otp = generateOTP();
-  const expiryTime = getOTPExpiryTime();
-
-  // Store OTP in database
   await deleteEmailVerificationsByUserId(user.id);
-  await createEmailVerification({
-    userId: user.id,
-    otp,
-    expiryTime
-  });
+  await updateUserEmailVerificationStatus(user.id);
 
-  // Send OTP email
-  await sendOTPEmail(email, otp);
-
-  res.json({ success: true, message: "OTP sent to your email" });
+  res.json({ success: true, message: "Email verification is disabled. You can login now." });
 });
 
 export const verifyOTP = asyncHandler(async (req, res) => {
@@ -373,39 +336,10 @@ export const verifyOTP = asyncHandler(async (req, res) => {
     throw new HttpError(404, "User not found");
   }
 
-  if (user.is_verified || user.email_verified) {
-    throw new HttpError(400, "Email already verified");
-  }
-
-  const verification = await getEmailVerificationByUserId(user.id);
-  if (!verification) {
-    throw new HttpError(400, "No OTP found. Please request a new one");
-  }
-
-  if ((verification.attempt_count || 0) >= 5) {
-    await deleteEmailVerificationsByUserId(user.id);
-    throw new HttpError(429, "Too many invalid OTP attempts. Please request a new code");
-  }
-
-  if (isOTPExpired(verification.expiry_time)) {
-    await deleteEmailVerificationsByUserId(user.id);
-    throw new HttpError(400, "OTP has expired. Please request a new one");
-  }
-
-  if (verification.otp !== otp) {
-    const updatedVerification = await incrementEmailVerificationAttempts(verification.id);
-    if ((updatedVerification?.attempt_count || 0) >= 5) {
-      await deleteEmailVerificationsByUserId(user.id);
-      throw new HttpError(429, "Too many invalid OTP attempts. Please request a new code");
-    }
-    throw new HttpError(400, "Invalid OTP");
-  }
-
-  // Mark email as verified
   await updateUserEmailVerificationStatus(user.id);
   await deleteEmailVerificationsByUserId(user.id);
 
-  res.json({ success: true, message: "Email verified successfully" });
+  res.json({ success: true, message: "Email verification is disabled. You can login now." });
 });
 
 // ========== FORGOT PASSWORD ==========

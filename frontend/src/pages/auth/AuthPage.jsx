@@ -137,11 +137,11 @@ export default function AuthPage({ initialMode = "login" }) {
           role: formData.role
         });
         setSuccessMessage(response?.message || "Registration successful. Please verify your email.");
-        navigate("/verify-otp", {
+        navigate("/login", {
           replace: true,
           state: {
             email: formData.email,
-            message: response?.message || "Registration successful. Please verify your email."
+            message: response?.message || "Registration successful. You can login now."
           }
         });
       }
