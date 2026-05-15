@@ -1,39 +1,53 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 
-const hasSmtpConfig = Boolean(
-  process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS
-);
+const resendApiKey = process.env.RESEND_API_KEY;
+const resendFromAddress = process.env.RESEND_FROM || "onboarding@resend.dev";
+const resend = resendApiKey ? new Resend(resendApiKey) : null;
 
-const smtpPort = Number(process.env.SMTP_PORT || 587);
-const isSecureSmtp = smtpPort === 465;
-const defaultFromAddress = process.env.SMTP_USER || "noreply@campus-portal.com";
-const authenticatedFromAddress = process.env.SMTP_USER || defaultFromAddress;
+const escapeHtml = (value) =>
+  String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
 
-if (!hasSmtpConfig && process.env.NODE_ENV === "production") {
-  throw new Error("SMTP configuration is required in production to send OTP emails");
-}
+const sendResendEmail = async ({ to, subject, html, text, from = resendFromAddress, errorMessage }) => {
+  if (!resend) {
+    if (process.env.NODE_ENV !== "production") {
+      console.log("[email-dev] Resend API key is missing. Email payload:", {
+        from,
+        to,
+        subject,
+        html,
+        text
+      });
+      return true;
+    }
 
-const transporter = hasSmtpConfig
-  ? nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: smtpPort,
-      secure: isSecureSmtp,
-      requireTLS: !isSecureSmtp,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
-      }
-    })
-  : nodemailer.createTransport({ jsonTransport: true });
+    throw new Error("RESEND_API_KEY is required in production to send emails");
+  }
+
+  const { error } = await resend.emails.send({
+    from,
+    to,
+    subject,
+    html,
+    text
+  });
+
+  if (error) {
+    console.error("Error sending email via Resend:", error);
+    throw new Error(errorMessage);
+  }
+
+  return true;
+};
 
 export const sendOTPEmail = async (email, otp) => {
   try {
-    if (!hasSmtpConfig && process.env.NODE_ENV !== "production") {
-      console.log(`[email-dev] OTP for ${email}: ${otp}`);
-    }
-
     const mailOptions = {
-      from: authenticatedFromAddress,
+      from: resendFromAddress,
       to: email,
       subject: "Campus Portal - Email Verification OTP",
       text: `Your verification code is: ${otp}`,
@@ -64,7 +78,10 @@ export const sendOTPEmail = async (email, otp) => {
       `
     };
 
-    await transporter.sendMail(mailOptions);
+    await sendResendEmail({
+      ...mailOptions,
+      errorMessage: "Failed to send OTP email"
+    });
     return true;
   } catch (error) {
     console.error("Error sending OTP email:", error);
@@ -75,7 +92,7 @@ export const sendOTPEmail = async (email, otp) => {
 export const sendPasswordResetEmail = async (email, resetLink) => {
   try {
     const mailOptions = {
-      from: authenticatedFromAddress,
+      from: resendFromAddress,
       to: email,
       subject: "Campus Portal - Password Reset Link",
       html: `
@@ -104,14 +121,17 @@ export const sendPasswordResetEmail = async (email, resetLink) => {
             </p>
             <p style="color: #999; font-size: 12px; margin: 20px 0 0 0; border-top: 1px solid #ddd; padding-top: 15px;">
               Or paste this link in your browser: <br>
-              <span style="word-break: break-all; color: #667eea;">${resetLink}</span>
+              <span style="word-break: break-all; color: #667eea;">${escapeHtml(resetLink)}</span>
             </p>
           </div>
         </div>
       `
     };
 
-    await transporter.sendMail(mailOptions);
+    await sendResendEmail({
+      ...mailOptions,
+      errorMessage: "Failed to send password reset email"
+    });
     return true;
   } catch (error) {
     console.error("Error sending password reset email:", error);
@@ -130,22 +150,25 @@ export const sendApplicationStatusUpdateEmail = async ({
     const normalizedStatus = status.replaceAll("_", " ").toUpperCase();
 
     const mailOptions = {
-      from: authenticatedFromAddress,
+      from: resendFromAddress,
       to: email,
       subject: `Application Update - ${company} (${normalizedStatus})`,
       text: `Hi ${studentName}, your application for ${jobTitle} at ${company} is now ${normalizedStatus}.`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #0f172a;">Application Status Update</h2>
-          <p>Hi ${studentName},</p>
-          <p>Your application for <strong>${jobTitle}</strong> at <strong>${company}</strong> is now:</p>
-          <p style="font-size: 20px; font-weight: bold; color: #0f766e;">${normalizedStatus}</p>
+          <p>Hi ${escapeHtml(studentName)},</p>
+          <p>Your application for <strong>${escapeHtml(jobTitle)}</strong> at <strong>${escapeHtml(company)}</strong> is now:</p>
+          <p style="font-size: 20px; font-weight: bold; color: #0f766e;">${escapeHtml(normalizedStatus)}</p>
           <p>Please log in to your dashboard for full details.</p>
         </div>
       `
     };
 
-    await transporter.sendMail(mailOptions);
+    await sendResendEmail({
+      ...mailOptions,
+      errorMessage: "Failed to send application status email"
+    });
     return true;
   } catch (error) {
     console.error("Error sending application status email:", error);

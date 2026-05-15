@@ -132,7 +132,7 @@ Implemented in [matchingService.js](/d:/new%20download/ggimidsem/backend/src/ser
 ### Cloud Deployment (Recommended)
 
 1. Backend on Render or Railway:
-Set `DATABASE_URL`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `SMTP_*`, and `GOOGLE_*`.
+Set `DATABASE_URL`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `RESEND_API_KEY`, `RESEND_FROM`, and `GOOGLE_*`.
 
 2. Frontend on Vercel:
 Set `VITE_API_URL` to backend API URL.
